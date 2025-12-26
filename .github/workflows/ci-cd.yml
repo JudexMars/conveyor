@@ -1,67 +1,42 @@
-# Этот workflow выполняет:
-# 1. Сборку проекта на нескольких ОС (Linux, Windows, macOS Intel, macOS Apple Silicon)
-# 2. Запуск юнит-тестов
-# 3. Деплой на macOS ARM64 через self-hosted runner
+# =============================================================================
+# GitHub Actions CI/CD Pipeline для Ktor приложения "Привет от Бондарчука!"
+# =============================================================================
 
 name: CI/CD Pipeline
 
-# -----------------------------------------------------------------------------
-# Триггеры: когда запускается workflow
-# -----------------------------------------------------------------------------
 on:
-  # Запуск при push в любую ветку
   push:
     branches:
       - '**'
-  
-  # Запуск при создании Pull Request
   pull_request:
     branches:
       - main
       - master
-  
-  # Возможность ручного запуска из интерфейса GitHub
   workflow_dispatch:
 
-# -----------------------------------------------------------------------------
-# Jobs (Задачи)
-# -----------------------------------------------------------------------------
 jobs:
-  # ===========================================================================
-  # Job 1: Build & Test - Сборка и тестирование на разных ОС
-  # ===========================================================================
   build-and-test:
     name: Build & Test (${{ matrix.os-name }})
     
-    # Стратегия матрицы для запуска на разных ОС
     strategy:
-      fail-fast: false  # Продолжать другие jobs даже если один упал
+      fail-fast: false
       matrix:
         include:
-          # Linux (Ubuntu)
           - os: ubuntu-latest
             os-name: Linux
-          
-          # Windows
           - os: windows-latest
             os-name: Windows
-          
-          # macOS Intel (x86_64)
-          - os: macos-15-intel
+          - os: macos-13
             os-name: macOS-Intel
-          
-          # macOS Apple Silicon (ARM64)
           - os: macos-latest
             os-name: macOS-ARM
     
     runs-on: ${{ matrix.os }}
     
     steps:
-      # Шаг 1: Checkout - получение кода из репозитория
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      # Шаг 2: Установка JDK 21
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -69,22 +44,18 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
       
-      # Шаг 3: Установка прав на Gradle Wrapper (Linux/macOS)
       - name: Grant execute permission for gradlew
         if: runner.os != 'Windows'
         run: chmod +x ./gradlew
       
-      # Шаг 4: Сборка проекта
       - name: Build project
         run: ./gradlew build -x test --no-daemon
         shell: bash
       
-      # Шаг 5: Запуск юнит-тестов
       - name: Run tests
         run: ./gradlew test --no-daemon
         shell: bash
       
-      # Шаг 6: Публикация отчёта о тестах
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -93,12 +64,10 @@ jobs:
           path: build/reports/tests/
           retention-days: 7
       
-      # Шаг 7: Сборка Fat JAR (только для Linux - для деплоя)
       - name: Build Fat JAR
         if: matrix.os == 'ubuntu-latest'
         run: ./gradlew shadowJar --no-daemon
       
-      # Шаг 8: Загрузка артефакта JAR (только для Linux)
       - name: Upload JAR artifact
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
@@ -107,40 +76,28 @@ jobs:
           path: build/libs/conveyor-all.jar
           retention-days: 7
 
-  # ===========================================================================
-  # Job 2: Deploy - Деплой на macOS ARM64 (self-hosted runner)
-  # ===========================================================================
   deploy:
     name: Deploy to Production (macOS ARM64)
-    
-    # Зависимость: запускается только после успешного build-and-test
     needs: build-and-test
-    
-    # Запускается только при push в main/master ветку
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    
-    # Запуск на self-hosted runner с macOS ARM64
     runs-on: [self-hosted, macOS, ARM64]
     
     steps:
-      # Шаг 1: Checkout кода
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      # Шаг 2: Скачивание артефакта JAR
       - name: Download JAR artifact
         uses: actions/download-artifact@v4
         with:
           name: application-jar
           path: ./deploy
       
-      # Шаг 3: Остановка предыдущей версии приложения
       - name: Stop previous application
         run: |
-          PID=\$(lsof -t -i:8081 || true)
-          if [ -n "\$PID" ]; then
-            echo "Stopping application with PID: \$PID"
-            kill \$PID || true
+          PID=$(lsof -t -i:8081 || true)
+          if [ -n "$PID" ]; then
+            echo "Stopping application with PID: $PID"
+            kill $PID || true
             sleep 3
           else
             echo "No application running on port 8081"
@@ -148,7 +105,6 @@ jobs:
         shell: bash
         continue-on-error: true
       
-      # Шаг 4: Деплой нового JAR файла
       - name: Deploy JAR to application directory
         run: |
           mkdir -p ~/conveyor-app
@@ -156,26 +112,24 @@ jobs:
           echo "JAR deployed to ~/conveyor-app/"
         shell: bash
       
-      # Шаг 5: Запуск приложения
       - name: Start application
         run: |
           cd ~/conveyor-app
           nohup java -jar conveyor-all.jar > app.log 2>&1 &
-          echo \$! > app.pid
-          echo "Application started with PID: \$(cat app.pid)"
+          echo $! > app.pid
+          echo "Application started with PID: $(cat app.pid)"
           sleep 5
         shell: bash
       
-      # Шаг 6: Проверка работоспособности
       - name: Health check
         run: |
-          RESPONSE=\$(curl -s http://localhost:8081 || echo "FAILED")
-          if [[ "\$RESPONSE" == *"Привет от Бондарчука"* ]]; then
+          RESPONSE=$(curl -s http://localhost:8081 || echo "FAILED")
+          if [[ "$RESPONSE" == *"Привет от Бондарчука"* ]]; then
             echo "Application is running successfully!"
-            echo "Response: \$RESPONSE"
+            echo "Response: $RESPONSE"
           else
             echo "Health check failed!"
-            echo "Response: \$RESPONSE"
+            echo "Response: $RESPONSE"
             exit 1
           fi
         shell: bash
