@@ -1,16 +1,11 @@
 plugins {
     kotlin("jvm") version "1.9.22"
     id("com.gradleup.shadow") version "8.3.5"
-    application
 }
 
 group = "org.example"
 version = "0.0.1-SNAPSHOT"
 description = "conveyor"
-
-application {
-    mainClass.set("org.example.conveyor.ConveyorApplicationKt")
-}
 
 java {
     toolchain {
@@ -43,4 +38,15 @@ tasks.shadowJar {
     manifest {
         attributes["Main-Class"] = "org.example.conveyor.ConveyorApplicationKt"
     }
+    // Мержим все service files (важно для Netty и SLF4J)
+    mergeServiceFiles()
+}
+
+// Делаем shadowJar основной задачей сборки JAR
+tasks.jar {
+    enabled = false
+}
+
+tasks.build {
+    dependsOn(tasks.shadowJar)
 }
