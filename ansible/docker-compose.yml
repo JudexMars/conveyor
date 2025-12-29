@@ -1,0 +1,36 @@
+# Docker Compose для запуска "удалённых серверов" с SSH
+
+version: '3.8'
+
+services:
+  # Сервер для Nginx
+  nginx-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.ssh
+    container_name: nginx-server
+    hostname: nginx-server
+    ports:
+      - "2221:22"
+      - "8083:80"
+    networks:
+      - ansible-network
+    restart: unless-stopped
+
+  # Сервер для Apache
+  apache-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.ssh
+    container_name: apache-server
+    hostname: apache-server
+    ports:
+      - "2222:22"
+      - "8084:80"
+    networks:
+      - ansible-network
+    restart: unless-stopped
+
+networks:
+  ansible-network:
+    driver: bridge

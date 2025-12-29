@@ -1,0 +1,43 @@
+# Dockerfile для контейнера с SSH-сервером (имитация удалённого сервера)
+
+FROM ubuntu:22.04
+
+# Отключаем интерактивные запросы при установке пакетов
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Устанавливаем необходимые пакеты
+RUN apt-get update && apt-get install -y \
+    openssh-server \
+    python3 \
+    python3-apt \
+    sudo \
+    systemctl \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Создаём директорию для SSH
+RUN mkdir /var/run/sshd
+
+# Создаём пользователя ansible с правами sudo
+RUN useradd -m -s /bin/bash ansible && \
+    echo "ansible:ansible" | chpasswd && \
+    echo "ansible ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Создаём директорию для SSH ключей
+RUN mkdir -p /home/ansible/.ssh && \
+    chmod 700 /home/ansible/.ssh && \
+    chown ansible:ansible /home/ansible/.ssh
+
+# Настраиваем SSH для приёма подключений
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+
+# Открываем порт SSH
+EXPOSE 22
+
+# Команда запуска SSH сервера
+CMD ["/usr/sbin/sshd", "-D"]
+
+

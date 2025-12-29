@@ -1,0 +1,4 @@
+# Handlers для Nginx
+---
+- name: Перезапустить Nginx
+  shell: "pkill nginx || true && nginx"

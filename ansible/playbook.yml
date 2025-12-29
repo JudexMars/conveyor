@@ -1,0 +1,57 @@
+# Ansible Playbook для развёртывания Nginx и Apache
+---
+
+# Play 1: Установка Nginx
+- name: Развёртывание Nginx
+  hosts: nginx_servers
+  become: yes
+  
+  roles:
+    - nginx
+  
+  post_tasks:
+    - name: Проверка что Nginx отвечает
+      shell: "curl -s http://localhost:80 | head -5"
+      register: nginx_response
+      changed_when: false
+    
+    - name: Вывод статуса Nginx
+      debug:
+        msg: "Nginx успешно запущен на {{ inventory_hostname }}"
+
+# Play 2: Установка Apache
+- name: Развёртывание Apache
+  hosts: apache_servers
+  become: yes
+  
+  roles:
+    - apache
+  
+  post_tasks:
+    - name: Проверка что Apache отвечает
+      shell: "curl -s http://localhost:80 | head -5"
+      register: apache_response
+      changed_when: false
+    
+    - name: Вывод статуса Apache
+      debug:
+        msg: "Apache успешно запущен на {{ inventory_hostname }}"
+
+# Play 3: Проверка работоспособности с локальной машины
+- name: Проверка работоспособности веб-серверов
+  hosts: all
+  become: no
+  gather_facts: no
+  
+  tasks:
+    - name: Проверка HTTP ответа
+      uri:
+        url: "http://127.0.0.1:{{ http_port }}"
+        return_content: yes
+        status_code: 200
+      register: http_response
+      delegate_to: localhost
+    
+    - name: Вывод результата проверки
+      debug:
+        msg: "Сервер {{ inventory_hostname }} отвечает на порту {{ http_port }}: OK"

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nginx - Привет от Бондарчука!</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        h1 { font-size: 3em; margin-bottom: 10px; }
+        .server-info {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .nginx-logo { font-size: 4em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nginx-logo">🌐</div>
+        <h1>Привет от Бондарчука!</h1>
+        <h2>Nginx Server</h2>
+        <div class="server-info">
+            <p><strong>Сервер:</strong> {{ inventory_hostname }}</p>
+            <p><strong>IP адрес:</strong> {{ ansible_host }}</p>
+            <p><strong>Развёрнуто с помощью:</strong> Ansible</p>
+        </div>
+    </div>
+</body>
+</html>

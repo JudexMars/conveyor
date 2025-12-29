@@ -1,0 +1,32 @@
+# Задачи для установки и настройки Apache
+---
+- name: Обновление кэша apt
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Установка Apache
+  apt:
+    name: apache2
+    state: present
+
+- name: Создание кастомной страницы приветствия
+  template:
+    src: index.html.j2
+    dest: /var/www/html/index.html
+    owner: www-data
+    group: www-data
+    mode: '0644'
+
+- name: Остановка Apache если запущен
+  shell: "pkill apache2 || true"
+  changed_when: false
+
+- name: Запуск Apache напрямую
+  shell: "apachectl start"
+  changed_when: true
+
+- name: Проверка что Apache слушает порт 80
+  wait_for:
+    port: 80
+    timeout: 30

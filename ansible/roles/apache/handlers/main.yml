@@ -1,0 +1,4 @@
+# Handlers для Apache
+---
+- name: Перезапустить Apache
+  shell: "pkill apache2 || true && apachectl start"
